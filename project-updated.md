@@ -40,6 +40,7 @@
 - ✅ Added the `CreateProjectModal` and `CreateEndpointModal` to allow intuitive project layout and configuration without any signups.
 - ✅ Implemented `RequestLogService` for future metrics processing.
 - ✅ Ran comprehensive E2E tests validating the full creation lifecycle and successfully matched mock responses.
+- ✅ Refined `README.md` to be highly concise and developer-focused.
 
 ### Next Steps (Phase 2)
 - [ ] Connect `RequestLogService` to a real-time WebSocket layer.
