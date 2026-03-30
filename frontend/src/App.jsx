@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import { LayoutDashboard, Plus, Settings, Activity, Terminal } from 'lucide-react';
+import { House, Plus, Pulse, TerminalWindow, IdentificationBadge, Broadcast } from '@phosphor-icons/react';
 import Dashboard from './pages/Dashboard';
 import ProjectDetail from './pages/ProjectDetail';
 
@@ -8,27 +8,31 @@ function App() {
     <Router>
       <div className="app">
         <nav className="navbar">
-          <div className="logo">
-             <Activity size={32} strokeWidth={2.5} color="#6366f1" />
-             <span>APInjector</span>
-          </div>
-          <div className="nav-links" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-            <Link to="/" className="btn btn-ghost" style={{ textDecoration: 'none' }}>
-              <LayoutDashboard size={20} />
-              Dashboard
+          <div className="container nav-content">
+            <Link to="/" className="logo" style={{ textDecoration: 'none' }}>
+               <Broadcast size={32} weight="fill" />
+               <span style={{ letterSpacing: '-0.02em' }}>APInjector</span>
             </Link>
-            <Link to="/logs" className="btn btn-ghost" style={{ textDecoration: 'none' }}>
-              <Terminal size={20} />
-              Logs
-            </Link>
-            <button className="btn btn-primary">
-              <Plus size={20} />
-              New Project
-            </button>
+            
+            <div className="nav-links" style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+              <Link to="/" className="btn btn-ghost" style={{ textDecoration: 'none' }}>
+                <House size={20} weight="bold" />
+                Dashboard
+              </Link>
+              <Link to="/logs" className="btn btn-ghost" style={{ textDecoration: 'none' }}>
+                <TerminalWindow size={20} weight="bold" />
+                Live Hub
+              </Link>
+              <div style={{ width: '1px', height: '24px', background: 'var(--glass-border)', margin: '0 0.5rem' }}></div>
+              <button className="btn btn-primary">
+                <Plus size={20} weight="bold" />
+                Connect API
+              </button>
+            </div>
           </div>
         </nav>
 
-        <main>
+        <main style={{ paddingBottom: '4rem' }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/project/:id" element={<ProjectDetail />} />
