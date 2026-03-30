@@ -2,7 +2,6 @@ package com.antigravity.apinjector.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,43 +10,45 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "projects")
+@Table(name = "chaos_configs")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Project {
+public class ChaosConfig {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @NotBlank
-    @Column(unique = true)
-    private String name;
-
-    @NotBlank
-    @Column(unique = true)
-    private String slug;
-
-    private String description;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    @JsonIgnore
+    private Project project;
 
     @Builder.Default
-    private boolean active = true;
+    private boolean enabled = false;
 
-    @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    @JsonIgnore
-    private List<Endpoint> endpoints = new ArrayList<>();
+    private int errorRatePercent = 0;
 
-    @OneToOne(mappedBy = "project", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonIgnore
-    private ChaosConfig chaosConfig;
+    @Builder.Default
+    private int latencySpikePercent = 0;
+
+    @Builder.Default
+    private int minSpikeMs = 500;
+
+    @Builder.Default
+    private int maxSpikeMs = 2000;
+
+    @Builder.Default
+    private int malformedResponsePercent = 0;
+
+    @Builder.Default
+    private int connectionDropPercent = 0;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

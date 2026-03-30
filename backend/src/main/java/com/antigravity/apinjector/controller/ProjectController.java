@@ -17,6 +17,7 @@ import java.util.UUID;
 public class ProjectController {
 
     private final ProjectService projectService;
+    private final com.antigravity.apinjector.service.ChaosConfigService chaosConfigService;
 
     @GetMapping
     public List<Project> getAll() {
@@ -40,5 +41,17 @@ public class ProjectController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {
         projectService.deleteProject(id);
+    }
+
+    @GetMapping("/{id}/chaos")
+    public com.antigravity.apinjector.model.ChaosConfig getChaosConfig(@PathVariable UUID id) {
+        return chaosConfigService.getByProjectId(id);
+    }
+
+    @PutMapping("/{id}/chaos")
+    public com.antigravity.apinjector.model.ChaosConfig updateChaosConfig(
+            @PathVariable UUID id,
+            @Valid @RequestBody com.antigravity.apinjector.model.ChaosConfig config) {
+        return chaosConfigService.updateConfig(id, config);
     }
 }

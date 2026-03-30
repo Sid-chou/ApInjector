@@ -17,12 +17,14 @@ import java.util.UUID;
 public class RequestLogService {
 
     private final RequestLogRepository requestLogRepository;
+    private final LogEventPublisher logEventPublisher;
 
     @Async
     @Transactional
     public void saveLog(RequestLog logEntry) {
-        requestLogRepository.save(logEntry);
-        log.debug("Saved request log async for project {}", logEntry.getProjectId());
+        RequestLog savedLog = requestLogRepository.save(logEntry);
+        log.debug("Saved request log async for project {}", savedLog.getProjectId());
+        logEventPublisher.publishLog(savedLog);
     }
 
     @Transactional(readOnly = true)

@@ -17,12 +17,16 @@ backend/target/
 backend/.mvn/
 backend/*.class
 backend/data/
+backend/*.log
+backend/application.log
+backend/backend.log
+backend/.m2/
 backend/.factorypath
 backend/.project
 backend/.settings/
 backend/bin/
 
-# Editors / IDEs
+# IDEs / OS
 .vscode/
 .idea/
 *.suo
@@ -31,12 +35,7 @@ backend/bin/
 *.sln
 *.sw?
 .DS_Store
-
-# Docker / Infrastructure
-postgres_data/
-redis_data/
-
-# OS generated files
 thumbs.db
 db.db
 Desktop.ini
+*.log

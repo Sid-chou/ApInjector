@@ -1,17 +1,39 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import { ArrowLeft, Plus, Globe, Trash2, Edit3, Settings, Play, Pause } from 'lucide-react';
+import { ArrowLeft, Plus, Globe, Trash2, Edit3, Settings, Play, Pause, Activity } from 'lucide-react';
 import CreateEndpointModal from '../components/CreateEndpointModal';
+import ChaosControlPanel from '../components/ChaosControlPanel';
+import { Client } from '@stomp/stompjs';
 
 const ProjectDetail = () => {
   const { id } = useParams();
   const { currentProject, fetchProject, endpoints, fetchEndpoints, deleteEndpoint, isLoading } = useStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [logs, setLogs] = useState([]);
 
   useEffect(() => {
     fetchProject(id);
     fetchEndpoints(id);
+
+    const client = new Client({
+      brokerURL: 'ws://localhost:8080/ws',
+      debug: (str) => console.log('STOMP: ' + str),
+      onChangeState: (state) => console.log('STOMP state: ', state),
+      onConnect: () => {
+        client.subscribe(`/topic/logs/${id}`, (msg) => {
+          if (msg.body) {
+            const incomingLog = JSON.parse(msg.body);
+            setLogs((prevLogs) => [incomingLog, ...prevLogs].slice(0, 50));
+          }
+        });
+      },
+    });
+    client.activate();
+
+    return () => {
+      client.deactivate();
+    };
   }, [id, fetchProject, fetchEndpoints]);
 
   if (isLoading || !currentProject) {
@@ -101,6 +123,64 @@ const ProjectDetail = () => {
             ))}
           </div>
         )}
+      </section>
+
+      <section style={{ marginTop: '3rem' }}>
+         <h2 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Activity size={24} /> Chaos Settings
+         </h2>
+         <ChaosControlPanel projectId={id} />
+      </section>
+
+      <section style={{ marginTop: '3rem' }}>
+        <h2 style={{ marginBottom: '1.5rem' }}>Live Request Logs</h2>
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          {logs.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+              Waiting for incoming requests... Try pinging your mock URL!
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+              <thead>
+                <tr style={{ background: 'var(--bg-document)', borderBottom: '1px solid var(--border)' }}>
+                  <th style={{ padding: '1rem' }}>Time</th>
+                  <th style={{ padding: '1rem' }}>Method & Path</th>
+                  <th style={{ padding: '1rem' }}>Status</th>
+                  <th style={{ padding: '1rem' }}>Latency</th>
+                  <th style={{ padding: '1rem' }}>Chaos Event</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.map((logEntry) => (
+                  <tr key={logEntry.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>
+                      {new Date(logEntry.timestamp).toLocaleTimeString()}
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <span style={{ fontWeight: 600, marginRight: '8px' }}>{logEntry.method}</span>
+                      {logEntry.path}
+                    </td>
+                    <td style={{ padding: '1rem' }}>
+                      <span className={`badge ${logEntry.responseStatus >= 400 ? 'badge-orange' : 'badge-green'}`}>
+                        {logEntry.responseStatus}
+                      </span>
+                    </td>
+                    <td style={{ padding: '1rem' }}>{logEntry.latencyMs}ms</td>
+                    <td style={{ padding: '1rem' }}>
+                      {logEntry.wasChaos ? (
+                        <span className="badge" style={{ background: '#fecaca', color: '#991b1b', border: '1px solid #f87171' }}>
+                          {logEntry.chaosType}
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)' }}>None</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
       </section>
 
       <CreateEndpointModal 

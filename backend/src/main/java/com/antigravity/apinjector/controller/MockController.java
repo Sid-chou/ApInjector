@@ -2,20 +2,21 @@ package com.antigravity.apinjector.controller;
 
 import com.antigravity.apinjector.model.Endpoint;
 import com.antigravity.apinjector.model.RequestLog;
+import com.antigravity.apinjector.service.ChaosConfigService;
+import com.antigravity.apinjector.service.ChaosEngine;
 import com.antigravity.apinjector.service.EndpointService;
 import com.antigravity.apinjector.service.ProjectService;
 import com.antigravity.apinjector.service.RequestLogService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
 
-import java.time.Duration;
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/m")
@@ -26,69 +27,102 @@ public class MockController {
     private final ProjectService projectService;
     private final EndpointService endpointService;
     private final RequestLogService requestLogService;
+    private final ChaosConfigService chaosConfigService;
+    private final ChaosEngine chaosEngine;
 
     @RequestMapping("/{projectSlug}/**")
-    public Mono<ResponseEntity<String>> handleMockRequest(ServerWebExchange exchange) {
-        String path = exchange.getRequest().getPath().value();
-        String method = exchange.getRequest().getMethod().name();
+    public ResponseEntity<String> handleMockRequest(HttpServletRequest request, HttpServletResponse response) {
+        String fullPath = request.getRequestURI(); // e.g. /m/e2e-test/hello
+        String method = request.getMethod();
 
-        // Extract project slug and the relative mock path
-        // URL format: /m/{projectSlug}/{mockPath}
-        String[] parts = path.substring(3).split("/", 2);
-        if (parts.length < 1) {
-            return Mono.just(ResponseEntity.badRequest().body("Invalid mock URL"));
+        // Strip the leading "/m" → "/e2e-test/hello", then split on first "/"
+        // After substring(2): "/e2e-test/hello"  → split("/", 3) → ["", "e2e-test", "hello"]
+        String stripped = fullPath.substring(2); // "/e2e-test/hello"
+        String[] parts = stripped.split("/", 3);  // ["", "e2e-test", "hello"]
+
+        if (parts.length < 2 || parts[1].isBlank()) {
+            return ResponseEntity.badRequest().body("Invalid mock URL");
         }
 
-        String projectSlug = parts[0];
-        String mockPath = parts.length > 1 ? "/" + parts[1] : "/";
+        String projectSlug = parts[1];
+        String mockPath = parts.length > 2 ? "/" + parts[2] : "/";
 
         log.info("Mock Request: {} {} for project: {}", method, mockPath, projectSlug);
 
-        return Mono.fromCallable(() -> projectService.getProjectBySlug(projectSlug))
-                .flatMap(projectOpt -> {
-                    if (projectOpt.isEmpty()) {
-                        return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body("Project not found: " + projectSlug));
-                    }
+        var projectOpt = projectService.getProjectBySlug(projectSlug);
+        if (projectOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("Project not found: " + projectSlug);
+        }
 
-                    return Mono.fromCallable(() -> endpointService.findMatch(projectOpt.get(), method, mockPath))
-                            .flatMap(endpointOpt -> {
-                                if (endpointOpt.isEmpty()) {
-                                    return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND)
-                                            .body("No endpoint found for " + method + " " + mockPath));
-                                }
+        var project = projectOpt.get();
+        var endpointOpt = endpointService.findMatch(project, method, mockPath);
+        if (endpointOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("No endpoint found for " + method + " " + mockPath);
+        }
 
-                                Endpoint endpoint = endpointOpt.get();
-                                if (!endpoint.isActive()) {
-                                    return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Endpoint is disabled"));
-                                }
+        Endpoint endpoint = endpointOpt.get();
+        if (!endpoint.isActive()) {
+            return ResponseEntity.status(503).body("Endpoint is disabled");
+        }
 
-                                // Handle Latency Simulation
-                                Mono<ResponseEntity<String>> response = Mono.just(
-                                        ResponseEntity.status(endpoint.getStatusCode())
-                                                .contentType(MediaType.parseMediaType(endpoint.getContentType()))
-                                                .body(endpoint.getResponseBody())
-                                );
+        var chaosConfig = chaosConfigService.getByProjectId(project.getId());
+        ChaosEngine.ChaosResult chaosResult = chaosEngine.evaluate(chaosConfig);
 
-                                Mono<ResponseEntity<String>> finalResponse = response;
-                                if (endpoint.getDelayMs() > 0) {
-                                    log.info("Simulating delay: {}ms", endpoint.getDelayMs());
-                                    finalResponse = response.delayElement(Duration.ofMillis(endpoint.getDelayMs()));
-                                }
+        // CONNECTION DROP — close socket immediately
+        if (chaosResult.isDropConnection()) {
+            requestLogService.saveLog(RequestLog.builder()
+                    .projectId(project.getId())
+                    .endpointId(endpoint.getId())
+                    .method(method)
+                    .path(mockPath)
+                    .responseStatus(0)
+                    .responseBody("")
+                    .latencyMs(0)
+                    .wasChaos(true)
+                    .chaosType(chaosResult.getChaosType())
+                    .build());
+            try {
+                response.sendError(503, "Connection drop simulated");
+            } catch (IOException e) {
+                log.warn("Error sending connection drop response", e);
+            }
+            return null;
+        }
 
-                                return finalResponse.doOnSuccess(res -> {
-                                    RequestLog logEntry = RequestLog.builder()
-                                            .projectId(projectOpt.get().getId())
-                                            .endpointId(endpoint.getId())
-                                            .method(method)
-                                            .path(mockPath)
-                                            .responseStatus(endpoint.getStatusCode())
-                                            .responseBody(endpoint.getResponseBody())
-                                            .latencyMs(endpoint.getDelayMs())
-                                            .wasChaos(false)
-                                            .build();
-                                    requestLogService.saveLog(logEntry);
-                                });
-                            });
-                });
+        int finalStatus = chaosResult.getOverrideStatusCode() > 0
+                ? chaosResult.getOverrideStatusCode() : endpoint.getStatusCode();
+
+        String finalBody = endpoint.getResponseBody();
+        if (chaosResult.isMalformedBody() && finalBody != null && finalBody.length() > 5) {
+            finalBody = finalBody.substring(0, finalBody.length() / 2);
+        }
+
+        // LATENCY SPIKE — Thread.sleep (we're on a normal servlet thread)
+        int totalDelayMs = endpoint.getDelayMs() + chaosResult.getAddedLatencyMs();
+        if (totalDelayMs > 0) {
+            log.info("Simulating delay: {}ms", totalDelayMs);
+            try {
+                Thread.sleep(totalDelayMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        // Save log asynchronously
+        requestLogService.saveLog(RequestLog.builder()
+                .projectId(project.getId())
+                .endpointId(endpoint.getId())
+                .method(method)
+                .path(mockPath)
+                .responseStatus(finalStatus)
+                .responseBody(finalBody)
+                .latencyMs(totalDelayMs)
+                .wasChaos(chaosResult.isChaos())
+                .chaosType(chaosResult.getChaosType())
+                .build());
+
+        return ResponseEntity.status(finalStatus)
+                .contentType(MediaType.parseMediaType(endpoint.getContentType()))
+                .body(finalBody);
     }
 }
