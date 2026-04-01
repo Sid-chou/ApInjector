@@ -60,6 +60,11 @@ public class ProjectService {
     }
 
     @Transactional
+    public Project updateProject(Project project) {
+        return projectRepository.save(project);
+    }
+
+    @Transactional
     public void deleteProject(UUID id) {
         projectRepository.deleteById(id);
     }

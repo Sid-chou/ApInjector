@@ -1,12 +1,10 @@
 package com.antigravity.apinjector.controller;
 
 import com.antigravity.apinjector.model.Endpoint;
+import com.antigravity.apinjector.model.Project;
 import com.antigravity.apinjector.model.RequestLog;
-import com.antigravity.apinjector.service.ChaosConfigService;
-import com.antigravity.apinjector.service.ChaosEngine;
-import com.antigravity.apinjector.service.EndpointService;
-import com.antigravity.apinjector.service.ProjectService;
-import com.antigravity.apinjector.service.RequestLogService;
+import com.antigravity.apinjector.model.ResponseVariant;
+import com.antigravity.apinjector.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.util.Random;
 
 @RestController
 @RequestMapping("/m")
@@ -29,16 +28,18 @@ public class MockController {
     private final RequestLogService requestLogService;
     private final ChaosConfigService chaosConfigService;
     private final ChaosEngine chaosEngine;
+    private final ResponseVariantService responseVariantService;
+    private final ResponseTemplateEngine templateEngine;
+
+    private final Random random = new Random();
 
     @RequestMapping("/{projectSlug}/**")
     public ResponseEntity<String> handleMockRequest(HttpServletRequest request, HttpServletResponse response) {
-        String fullPath = request.getRequestURI(); // e.g. /m/e2e-test/hello
+        String fullPath = request.getRequestURI();
         String method = request.getMethod();
 
-        // Strip the leading "/m" → "/e2e-test/hello", then split on first "/"
-        // After substring(2): "/e2e-test/hello"  → split("/", 3) → ["", "e2e-test", "hello"]
-        String stripped = fullPath.substring(2); // "/e2e-test/hello"
-        String[] parts = stripped.split("/", 3);  // ["", "e2e-test", "hello"]
+        String stripped = fullPath.substring(2);
+        String[] parts = stripped.split("/", 3);
 
         if (parts.length < 2 || parts[1].isBlank()) {
             return ResponseEntity.badRequest().body("Invalid mock URL");
@@ -65,22 +66,46 @@ public class MockController {
             return ResponseEntity.status(503).body("Endpoint is disabled");
         }
 
+        // ── Resolve response body & status (variant or direct) ───────────────
+        String finalBody;
+        int finalStatus;
+        String finalContentType;
+
+        if (endpoint.getActiveVariantId() != null) {
+            var variantList = responseVariantService.getVariantsByEndpoint(endpoint.getId());
+            ResponseVariant activeVariant = variantList.stream()
+                    .filter(v -> v.getId().equals(endpoint.getActiveVariantId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (activeVariant != null) {
+                finalBody = activeVariant.getBody();
+                finalStatus = activeVariant.getStatusCode();
+                finalContentType = activeVariant.getContentType();
+            } else {
+                // Variant was deleted — fall back to endpoint defaults
+                finalBody = endpoint.getResponseBody();
+                finalStatus = endpoint.getStatusCode();
+                finalContentType = endpoint.getContentType();
+            }
+        } else {
+            finalBody = endpoint.getResponseBody();
+            finalStatus = endpoint.getStatusCode();
+            finalContentType = endpoint.getContentType();
+        }
+
+        // ── Apply response templating ─────────────────────────────────────────
+        if (endpoint.isTemplate() && finalBody != null) {
+            finalBody = templateEngine.resolve(finalBody, request);
+        }
+
+        // ── Chaos evaluation ──────────────────────────────────────────────────
         var chaosConfig = chaosConfigService.getByProjectId(project.getId());
         ChaosEngine.ChaosResult chaosResult = chaosEngine.evaluate(chaosConfig);
 
-        // CONNECTION DROP — close socket immediately
+        // CONNECTION DROP
         if (chaosResult.isDropConnection()) {
-            requestLogService.saveLog(RequestLog.builder()
-                    .projectId(project.getId())
-                    .endpointId(endpoint.getId())
-                    .method(method)
-                    .path(mockPath)
-                    .responseStatus(0)
-                    .responseBody("")
-                    .latencyMs(0)
-                    .wasChaos(true)
-                    .chaosType(chaosResult.getChaosType())
-                    .build());
+            requestLogService.saveLog(buildLog(project, endpoint, method, mockPath, 0, "", 0, true, chaosResult.getChaosType()));
             try {
                 response.sendError(503, "Connection drop simulated");
             } catch (IOException e) {
@@ -89,18 +114,21 @@ public class MockController {
             return null;
         }
 
-        int finalStatus = chaosResult.getOverrideStatusCode() > 0
-                ? chaosResult.getOverrideStatusCode() : endpoint.getStatusCode();
+        // Override status for chaos errors
+        if (chaosResult.getOverrideStatusCode() > 0) {
+            finalStatus = chaosResult.getOverrideStatusCode();
+        }
 
-        String finalBody = endpoint.getResponseBody();
+        // Malformed body
         if (chaosResult.isMalformedBody() && finalBody != null && finalBody.length() > 5) {
             finalBody = finalBody.substring(0, finalBody.length() / 2);
         }
 
-        // LATENCY SPIKE — Thread.sleep (we're on a normal servlet thread)
-        int totalDelayMs = endpoint.getDelayMs() + chaosResult.getAddedLatencyMs();
+        // ── Latency simulation ────────────────────────────────────────────────
+        int profileDelay = resolveProfileDelay(project);
+        int totalDelayMs = profileDelay + endpoint.getDelayMs() + chaosResult.getAddedLatencyMs();
         if (totalDelayMs > 0) {
-            log.info("Simulating delay: {}ms", totalDelayMs);
+            log.info("Simulating total delay: {}ms", totalDelayMs);
             try {
                 Thread.sleep(totalDelayMs);
             } catch (InterruptedException e) {
@@ -108,21 +136,48 @@ public class MockController {
             }
         }
 
-        // Save log asynchronously
-        requestLogService.saveLog(RequestLog.builder()
+        // ── Async log ─────────────────────────────────────────────────────────
+        requestLogService.saveLog(buildLog(project, endpoint, method, mockPath,
+                finalStatus, finalBody, totalDelayMs, chaosResult.isChaos(), chaosResult.getChaosType()));
+
+        return ResponseEntity.status(finalStatus)
+                .contentType(MediaType.parseMediaType(finalContentType != null ? finalContentType : "application/json"))
+                .body(finalBody);
+    }
+
+    // ── Latency profile resolver ──────────────────────────────────────────────
+
+    private int resolveProfileDelay(Project project) {
+        if (project.getLatencyProfile() == null) return 0;
+        int base = switch (project.getLatencyProfile()) {
+            case "FAST_LAN"  -> 5;
+            case "CABLE"     -> 50;
+            case "SLOW_3G"   -> 1500;
+            case "CUSTOM"    -> project.getGlobalLatencyMs();
+            default          -> 0; // NONE
+        };
+        // Add jitter ±jitterMs
+        int jitter = project.getJitterMs();
+        if (jitter > 0) {
+            base += (random.nextInt(jitter * 2 + 1) - jitter);
+            base = Math.max(0, base);
+        }
+        return base;
+    }
+
+    private RequestLog buildLog(Project project, Endpoint endpoint, String method,
+                                 String path, int status, String body,
+                                 int latency, boolean wasChaos, String chaosType) {
+        return RequestLog.builder()
                 .projectId(project.getId())
                 .endpointId(endpoint.getId())
                 .method(method)
-                .path(mockPath)
-                .responseStatus(finalStatus)
-                .responseBody(finalBody)
-                .latencyMs(totalDelayMs)
-                .wasChaos(chaosResult.isChaos())
-                .chaosType(chaosResult.getChaosType())
-                .build());
-
-        return ResponseEntity.status(finalStatus)
-                .contentType(MediaType.parseMediaType(endpoint.getContentType()))
-                .body(finalBody);
+                .path(path)
+                .responseStatus(status)
+                .responseBody(body)
+                .latencyMs(latency)
+                .wasChaos(wasChaos)
+                .chaosType(chaosType)
+                .build();
     }
 }

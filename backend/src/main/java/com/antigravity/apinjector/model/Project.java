@@ -40,6 +40,18 @@ public class Project {
     @Builder.Default
     private boolean active = true;
 
+    // Latency profile: NONE, FAST_LAN, CABLE, SLOW_3G, CUSTOM
+    @Builder.Default
+    private String latencyProfile = "NONE";
+
+    // Base delay in ms for CUSTOM profile
+    @Builder.Default
+    private int globalLatencyMs = 0;
+
+    // ±jitter range in ms
+    @Builder.Default
+    private int jitterMs = 0;
+
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     @JsonIgnore

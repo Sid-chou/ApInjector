@@ -36,6 +36,19 @@ public class EndpointController {
         return endpointService.createEndpoint(endpoint);
     }
 
+    @PutMapping("/{id}")
+    public Endpoint update(@PathVariable UUID projectId, @PathVariable UUID id,
+                           @Valid @RequestBody Endpoint endpoint) {
+        getProjectOrThrow(projectId); // ensure project exists
+        return endpointService.updateEndpoint(id, endpoint);
+    }
+
+    @PatchMapping("/{id}/toggle")
+    public Endpoint toggle(@PathVariable UUID projectId, @PathVariable UUID id) {
+        getProjectOrThrow(projectId);
+        return endpointService.toggleEndpoint(id);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable UUID id) {

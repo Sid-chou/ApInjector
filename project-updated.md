@@ -115,9 +115,62 @@ The project is now visually premium and operationally stable.
 
 ---
 
-## 🚀 Next Priority: Phase 3 — Dynamic Response Templating
+## 2026-03-31 — Phase 1 & 2 Feature Completion ✅
 
-The next major feature is adding intelligence to the mock responses:
-1.  **Variable Injection**: Use `{{request.body.id}}` or `{{request.query.name}}` in responses.
-2.  **Data Generation**: Integrate a generator (Faker-style) for `{{faker.name}}`, `{{faker.email}}`, etc.
-3.  **Conditional Logic**: (Optional) Simple if/else for different response scenarios.
+Completed all incomplete Phase 1 and Phase 2 features from the PRD.
+
+### New Backend Files
+- `model/ResponseVariant.java` — JPA entity for named response variants per endpoint
+- `repository/ResponseVariantRepository.java` — CRUD + endpoint-scoped queries
+- `service/ResponseVariantService.java` — CRUD + activateVariant / deactivateVariant
+- `controller/ResponseVariantController.java` — Full REST API for variants
+- `service/ResponseTemplateEngine.java` — `{{placeholder}}` variable resolver with Datafaker integration
+- `service/OpenApiImportService.java` — Parses OpenAPI 3.0/Swagger 2.0 specs, auto-creates endpoints
+- `controller/ImportController.java` — `POST /api/projects/{id}/import/openapi`
+- `controller/RequestLogController.java` — Paginated logs, stats, CSV/JSON export, clear
+
+### Modified Backend Files
+- `model/Endpoint.java` — Added `isTemplate`, `activeVariantId`, `variants` OneToMany
+- `model/Project.java` — Added `latencyProfile`, `globalLatencyMs`, `jitterMs`
+- `controller/EndpointController.java` — Added `PUT /{id}` (update) and `PATCH /{id}/toggle`
+- `controller/ProjectController.java` — Added `PUT /{id}` (update project settings)
+- `controller/MockController.java` — Full refactor: variant resolution, template engine, latency profiles
+- `service/EndpointService.java` — Added `updateEndpoint()`, `toggleEndpoint()`, `findById()`
+- `service/ProjectService.java` — Added `updateProject()`
+- `service/RequestLogService.java` — Added paginated queries, stats aggregation, CSV/JSON export
+- `repository/RequestLogRepository.java` — Extended with paged queries, stats JPQL, delete by project
+- `pom.xml` — Added `net.datafaker:datafaker:2.4.2` and `io.swagger.parser.v3:swagger-parser:2.1.25`
+
+### New Frontend Files
+- `components/EditEndpointModal.jsx` — Pre-filled edit modal with template toggle + placeholder hints
+- `components/ResponseVariantModal.jsx` — Variant list, create, activate, deactivate UI
+- `components/ImportSpecModal.jsx` — OpenAPI paste/upload with result summary
+- `components/LatencyProfilePanel.jsx` — NONE/FAST_LAN/CABLE/SLOW_3G/CUSTOM with jitter slider
+- `components/ChaosDashboard.jsx` — Analytics: stat cards, PieChart, LineChart timeline, reliability BarChart
+
+### Modified Frontend Files
+- `store/useStore.js` — Complete overhaul with all new actions
+- `components/CreateEndpointModal.jsx` — Added template toggle + placeholder hints
+- `pages/ProjectDetail.jsx` — Full overhaul: all buttons wired, filter bar, tab toggle, pagination, export
+
+### Phase 1 & 2 Feature Status
+- ✅ **Endpoint Update & Toggle** — Edit and Pause/Play buttons fully functional
+- ✅ **Response Variants** — Create, name, and activate alternative responses per endpoint
+- ✅ **Response Templating + Faker** — `{{faker.name.fullName}}`, `{{request.body.id}}`, etc.
+- ✅ **OpenAPI/Swagger Import** — Auto-generate endpoints from spec JSON/YAML
+- ✅ **Latency Profiles** — NONE/FAST_LAN/CABLE/SLOW_3G/CUSTOM with jitter ± range
+- ✅ **Request Log Filter, Pagination & Export** — Filter by method/status, paginate, CSV/JSON download
+- ✅ **Chaos Dashboard Analytics** — Pie chart, latency timeline, endpoint reliability BarChart
+
+---
+
+## 🚀 Next Priority: Phase 3
+
+### Deferred to Phase 3
+- **Proxy Mode (F8)** — Forward unmatched requests to real backend, record responses
+- **Monaco Editor** — Replace textarea with VS Code editor for JSON/YAML
+
+### New Phase 3 Priority
+- **Project Sharing & Teams (F9)** — Shareable links, role-based access
+- **Webhook Simulation (F10)** — Outbound HTTP on mock request event
+- **GraphQL Mock Support (F11)** — Schema-based resolver mocking

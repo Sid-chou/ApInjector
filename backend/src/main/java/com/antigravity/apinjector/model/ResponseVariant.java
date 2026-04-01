@@ -11,56 +11,39 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "endpoints")
+@Table(name = "response_variants")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Endpoint {
+public class ResponseVariant {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @NotBlank
-    private String method; // GET, POST, etc.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "endpoint_id", nullable = false)
+    @JsonIgnore
+    private Endpoint endpoint;
 
     @NotBlank
-    private String path; // e.g., /users
+    private String name; // e.g., "Success", "Not Found", "Server Error"
 
+    @Builder.Default
     private int statusCode = 200;
 
     @Column(columnDefinition = "TEXT")
-    private String responseBody;
+    private String body;
 
+    @Builder.Default
     private String contentType = "application/json";
 
     @Builder.Default
-    private int delayMs = 0;
-
-    @Builder.Default
-    private boolean active = true;
-
-    @Builder.Default
     private boolean isTemplate = false;
-
-    // Points to the active response variant (null = use responseBody directly)
-    private UUID activeVariantId;
-
-    @OneToMany(mappedBy = "endpoint", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    @JsonIgnore
-    private List<ResponseVariant> variants = new ArrayList<>();
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "project_id")
-    @JsonIgnore
-    private Project project;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

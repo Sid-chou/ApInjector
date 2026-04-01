@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { X, CheckCircle, Code, Clock, Terminal } from '@phosphor-icons/react';
+import { X, CheckCircle, Code, Clock, Terminal, Lightbulb } from '@phosphor-icons/react';
+
+const PLACEHOLDER_HINTS = [
+  '{{timestamp}}', '{{uuid}}', '{{randomInt}}',
+  '{{faker.name.fullName}}', '{{faker.name.firstName}}', '{{faker.internet.email}}',
+  '{{faker.address.city}}', '{{faker.company.name}}',
+  '{{request.query.id}}', '{{request.body.fieldName}}',
+];
 
 const CreateEndpointModal = ({ isOpen, onClose, projectId }) => {
   const [method, setMethod] = useState('GET');
@@ -9,6 +16,8 @@ const CreateEndpointModal = ({ isOpen, onClose, projectId }) => {
   const [contentType, setContentType] = useState('application/json');
   const [delayMs, setDelayMs] = useState(0);
   const [responseBody, setResponseBody] = useState('{\n  "message": "success"\n}');
+  const [isTemplate, setIsTemplate] = useState(false);
+  const [showHints, setShowHints] = useState(false);
   
   const { createEndpoint } = useStore();
 
@@ -24,7 +33,8 @@ const CreateEndpointModal = ({ isOpen, onClose, projectId }) => {
       statusCode: Number(statusCode),
       contentType,
       delayMs: Number(delayMs),
-      responseBody
+      responseBody,
+      isTemplate,
     });
     
     setMethod('GET');
@@ -32,6 +42,7 @@ const CreateEndpointModal = ({ isOpen, onClose, projectId }) => {
     setStatusCode(200);
     setDelayMs(0);
     setResponseBody('{\n  "message": "success"\n}');
+    setIsTemplate(false);
     onClose();
   };
 
@@ -122,8 +133,27 @@ const CreateEndpointModal = ({ isOpen, onClose, projectId }) => {
                 <Terminal size={18} weight="bold" />
                 Response Payload (JSON)
               </label>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)' }}>PRETTY PRINTED</span>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button type="button" onClick={() => setShowHints(!showHints)}
+                  className="btn btn-ghost" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}>
+                  <Lightbulb size={13} weight="bold" /> Hints
+                </button>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: isTemplate ? 'var(--primary)' : 'var(--text-muted)' }}>
+                  <input type="checkbox" checked={isTemplate} onChange={e => setIsTemplate(e.target.checked)} />
+                  Templates
+                </label>
+              </div>
             </div>
+            {showHints && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.75rem', padding: '0.75rem', background: 'rgba(99,102,241,0.06)', borderRadius: '6px' }}>
+                {PLACEHOLDER_HINTS.map(p => (
+                  <code key={p} onClick={() => setResponseBody(prev => prev + p)}
+                    style={{ fontSize: '0.72rem', background: 'rgba(99,102,241,0.15)', color: 'var(--primary)', padding: '0.2rem 0.45rem', borderRadius: '4px', cursor: 'pointer' }}>
+                    {p}
+                  </code>
+                ))}
+              </div>
+            )}
             <textarea
               className="form-input"
               rows="10"
