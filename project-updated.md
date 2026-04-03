@@ -167,10 +167,41 @@ Completed all incomplete Phase 1 and Phase 2 features from the PRD.
 ## 🚀 Next Priority: Phase 3
 
 ### Deferred to Phase 3
-- **Proxy Mode (F8)** — Forward unmatched requests to real backend, record responses
-- **Monaco Editor** — Replace textarea with VS Code editor for JSON/YAML
+- [ ] **Monaco Editor** — Replace textarea with VS Code editor for JSON/YAML (In Planning)
+- [ ] **Proxy Mode (F8)** — Forward unmatched requests to real backend, record responses
+- [ ] **Project Sharing & Teams (F9)** — Auth, shareable links, role-based access
+- [ ] **Webhook Simulation (F10)** — Outbound HTTP on mock request event
+- [ ] **GraphQL Mock Support (F11)** — Schema-based resolver mocking
 
-### New Phase 3 Priority
-- **Project Sharing & Teams (F9)** — Shareable links, role-based access
-- **Webhook Simulation (F10)** — Outbound HTTP on mock request event
-- **GraphQL Mock Support (F11)** — Schema-based resolver mocking
+---
+
+## 2026-04-03 — Comprehensive Code Audit ✅
+
+Performed a full system check to identify missing features and technical debt.
+
+### Audit Findings
+- **Frontend**: All Phase 2 features (Chaos, Variants, Latency) are functional and polished. Monaco Editor is the most immediate visual upgrade needed.
+- **Backend**: Core engine is stable. `ResponseTemplateEngine` is functional but could be extended for nested JSON.
+- **Infrastructure**: Persistence and real-time streaming are verified.
+
+### Updated Roadmap for Phase 3
+1. **Monaco Integration**: Enhancing the developer experience with a real IDE-like editor.
+2. **Security & Auth**: Foundations for multi-user support.
+3. **Traffic Recording (Proxy Mode)**: Helping users migrate from real APIs to mocks instantly.
+
+---
+
+## 2026-04-03 — Security Patch: Axios Supply Chain Mitigation ✅
+
+Addressed the critical supply chain attack on the `axios` npm package (versions `1.14.1` and `0.30.4`).
+
+### Security Intervention
+- **Vulnerability**: Malicious versions published on March 31, 2026, containing a Remote Access Trojan (RAT).
+- **Action Taken**: Pinned `axios` to exactly `1.14.0` in both root and frontend `package.json` files.
+- **Verification**: 
+    - Confirmed existing `node_modules` were on `1.14.0` (SAFE).
+    - Found no traces of `plain-crypto-js` (the malicious phantom dependency).
+    - Removed caret (`^`) prefixes to prevent accidental upgrades to the compromised versions.
+
+---
+
