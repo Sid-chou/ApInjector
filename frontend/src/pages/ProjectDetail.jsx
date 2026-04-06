@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore';
 import {
   CaretLeft, Plus, GlobeHemisphereWest, Trash, PencilSimple, Gear,
   Play, Pause, Pulse, Broadcast, DotsThreeVertical, UploadSimple,
-  FunnelSimple, Export, Broom, Rows, ChartBar, Layers
+  FunnelSimple, Export, Broom, Rows, ChartBar, Stack
 } from '@phosphor-icons/react';
 import CreateEndpointModal from '../components/CreateEndpointModal';
 import EditEndpointModal from '../components/EditEndpointModal';
@@ -202,7 +202,7 @@ const ProjectDetail = () => {
                       <button className="btn btn-ghost" style={{ padding: '0.45rem', fontSize: '0.75rem' }}
                         title="Response Variants"
                         onClick={() => setVariantEndpoint(endpoint)}>
-                        <Layers size={17} weight="bold" />
+                        <Stack size={17} weight="bold" />
                       </button>
                       <button className="btn btn-danger-ghost" style={{ padding: '0.45rem' }} title="Delete"
                         onClick={() => deleteEndpoint(id, endpoint.id)}>
