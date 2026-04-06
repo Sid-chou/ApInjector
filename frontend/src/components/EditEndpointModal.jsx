@@ -47,13 +47,8 @@ const EditEndpointModal = ({ isOpen, onClose, projectId, endpoint }) => {
   };
 
   return (
-    <div className="modal-overlay" style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(15, 23, 42, 0.4)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-      backdropFilter: 'blur(8px)', animation: 'fadeIn 0.2s ease-out'
-    }}>
-      <div className="glass-card" style={{ width: '680px', maxHeight: '92vh', overflowY: 'auto', cursor: 'default', padding: '2.5rem', boxShadow: 'var(--shadow-lg)' }}>
+    <div className="modal-overlay">
+      <div className="glass-card modal-panel" style={{ width: '680px', maxHeight: '92vh' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <Code size={32} weight="duotone" color="var(--primary)" />

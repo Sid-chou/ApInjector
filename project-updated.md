@@ -205,3 +205,14 @@ Addressed the critical supply chain attack on the `axios` npm package (versions 
 
 ---
 
+## 2026-04-06 — Frontend Performance Optimization: Glassmorphism GPU Compositing ✅
+
+Optimized the CSS for glassmorphism components to improve rendering performance and reduce UI lag.
+
+### Changes & Optimizations
+- **File:** `frontend/src/index.css`
+- **GPU Acceleration**: Added `will-change: transform` and `transform: translateZ(0)` to all glassmorphic elements (`.glass-card`, `.navbar`, and a new `.glass` utility). This forces the browser to promote these elements to their own GPU layer, preventing expensive re-paints during scrolls and animations.
+- **Utility Class**: Added a reusable `.glass` utility class for quick application of optimized glassmorphism.
+- **Cross-Browser**: Ensured `-webkit-backdrop-filter` is consistently applied for Safari compatibility.
+
+

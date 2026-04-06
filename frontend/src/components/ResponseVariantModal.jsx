@@ -54,13 +54,8 @@ const ResponseVariantModal = ({ isOpen, onClose, endpoint }) => {
   };
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(15, 23, 42, 0.5)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-      backdropFilter: 'blur(8px)', animation: 'fadeIn 0.2s ease-out'
-    }}>
-      <div className="glass-card" style={{ width: '680px', maxHeight: '90vh', overflowY: 'auto', cursor: 'default', padding: '2.5rem', boxShadow: 'var(--shadow-lg)' }}>
+    <div className="modal-overlay">
+      <div className="glass-card modal-panel" style={{ width: '680px', maxHeight: '90vh' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Response Variants</h2>
