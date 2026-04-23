@@ -215,4 +215,22 @@ Optimized the CSS for glassmorphism components to improve rendering performance 
 - **Utility Class**: Added a reusable `.glass` utility class for quick application of optimized glassmorphism.
 - **Cross-Browser**: Ensured `-webkit-backdrop-filter` is consistently applied for Safari compatibility.
 
+---
 
+## 2026-04-23 — README Overhaul ✅
+
+Completely rewrote `README.md` from a 24-line stub into a comprehensive project reference document.
+
+### What Was Added
+- **Badges**: Tech stack badges (Spring Boot, React, Java 21, PostgreSQL, Redis, WebSocket, Phase status).
+- **Feature Table**: Full Phase 1 & 2 feature matrix with descriptions; Phase 3 roadmap table.
+- **Architecture Diagram**: ASCII art of the system architecture and full request lifecycle flow.
+- **Tech Stack Tables**: Separate frontend and backend tables with versions and purposes.
+- **Getting Started**: Step-by-step setup guide covering Docker, backend, and frontend startup.
+- **Project Structure**: Annotated file tree highlighting key files and their roles.
+- **API Reference**: Full management API endpoint listing + mock server catch-all description.
+- **Chaos Mode Table**: Per-chaos-type behavior and dashboard color coding.
+- **Response Templating**: Example JSON showing `{{faker.*}}` and `{{request.*}}` syntax.
+- **Security Note**: Documented the Axios supply-chain vulnerability and the pinning fix.
+- **Changelog Highlights**: Summary table linking to `project-updated.md` for full history.
+- **Project Rating Table**: Pulled from PRD internal review scores.
