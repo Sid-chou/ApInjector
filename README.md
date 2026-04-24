@@ -313,12 +313,12 @@ Powered by [Datafaker](https://www.datafaker.net/). Supports `faker.*`, `request
 
 ---
 
-## Security Note
+<!-- ## Security Note
 
-> **Axios v1.14.1 and v0.30.4 are compromised.** A malicious Remote Access Trojan was published in those versions on March 31, 2026. This project pins `axios` to exactly `1.14.0` in all `package.json` files to prevent accidental upgrades.
+> **Axios v1.14.1 and v0.30.4 are compromised.** A malicious Remote Access Trojan was published in those versions on March 31, 2026. This project pins `axios` to exactly `1.14.0` in all `package.json` files to prevent accidental upgrades. -->
 
 ---
-
+<!-- 
 ## Changelog Highlights
 
 | Date | Change |
@@ -330,11 +330,11 @@ Powered by [Datafaker](https://www.datafaker.net/). Supports `faker.*`, `request
 | 2026-03-30 | Glassmorphism redesign; 100% migration to Phosphor Icons |
 | 2026-03-30 | Critical bug fixes: WebFlux→MVC, WebSocket SockJS removal, H2 persistence |
 
-Full change log: [`project-updated.md`](./project-updated.md)
+Full change log: [`project-updated.md`](./project-updated.md) -->
 
 ---
 
-## Project Rating
+<!-- ## Project Rating
 
 > This project scored **9.2 / 10** in the internal PRD review.
 
@@ -350,4 +350,4 @@ Full change log: [`project-updated.md`](./project-updated.md)
 
 ## License
 
-MIT
+MIT -->
